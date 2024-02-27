@@ -19,30 +19,31 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-async function run() {
+async function connectDb() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    //await client.close();
   }
 }
-run().catch(console.dir);
+connectDb().catch(console.dir);
 
+let numberOfRequests=0;
+let averageTimeToRespond=0;
 
 app.get('/',async (req,res)=>{
-    await client.connect();
-
+    const st=+new Date();
+    
     const dbName = "myDatabase";
     const collectionName = "recipes";
     const database = client.db(dbName);
     const collection = database.collection(collectionName);
 
-
+    let lastFiveDocs=[];
     const recipes = [
         {
             appId,
@@ -54,12 +55,21 @@ app.get('/',async (req,res)=>{
 
       try {
         const insertManyResult = await collection.insertMany(recipes);
-        console.log(`${insertManyResult.insertedCount} documents successfully inserted.\n`);
+        lastFiveDocs = await collection.find({}).sort({ createdStamp: -1 }).limit(5).toArray()
+        
       } catch (err) {
         console.error(`Something went wrong trying to insert the new documents: ${err}\n`);
       }
-    await client.close();
-    res.send('<h1>Auto Scaling Demo</h1>')
+    let responseTime=(+new Date()-st);
+    let totalTime=(averageTimeToRespond*numberOfRequests)+responseTime;
+    ++numberOfRequests;
+    averageTimeToRespond=totalTime/numberOfRequests;
+    console.log(` ${appId} :: ${new Date()} ::  ART:${Math.ceil(averageTimeToRespond)}\n`);
+    res.send({
+        lastFiveDocs,
+        responseTime,
+        averageTimeToRespond:Math.ceil(averageTimeToRespond)
+    })
 })
 
 app.listen(port,()=>{
