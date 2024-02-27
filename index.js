@@ -66,9 +66,9 @@ app.get('/',async (req,res)=>{
     averageTimeToRespond=totalTime/numberOfRequests;
     console.log(` ${appId} :: ${new Date()} ::  ART:${Math.ceil(averageTimeToRespond)}\n`);
     res.send({
-        lastFiveDocs,
         responseTime,
-        averageTimeToRespond:Math.ceil(averageTimeToRespond)
+        averageTimeToRespond:Math.ceil(averageTimeToRespond),
+        lastFiveDocs,
     })
 })
 
